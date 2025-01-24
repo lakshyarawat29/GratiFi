@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/lakshyarawat/Desktop/LNMHacks/smartcontracts/tipPlatform.sol": {
+      "lastModificationDate": 1737706968826,
+      "contentHash": "720df4879accb41d41d51c1bc3c3857f",
+      "sourceName": "smartcontracts/tipPlatform.sol",
+      "solcConfig": {
+        "version": "0.5.11",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.5.11"
+      ],
+      "artifacts": [
+        "TipPlatform"
+      ]
+    }
+  }
+}
