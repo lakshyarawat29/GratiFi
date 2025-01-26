@@ -1,4 +1,3 @@
-// models/Tipper.js
 const mongoose = require('mongoose');
 
 const TipperSchema = new mongoose.Schema(
@@ -25,6 +24,7 @@ const TipperSchema = new mongoose.Schema(
       {
         creatorWallet: String, // Wallet address of the creator tipped
         amount: Number, // Amount tipped
+        transactionHash: String, // Blockchain transaction hash
         date: {
           type: Date,
           default: Date.now,

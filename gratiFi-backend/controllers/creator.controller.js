@@ -1,4 +1,12 @@
+const { ethers } = require('ethers');
 const Creator = require('../models/creator.model');
+const contractABI = require('../../artifacts/smartcontracts/tipPlatform.sol/TipPlatform.json'); // ABI of your contract
+const contractAddress = '0x57e928A62346e74edf2420deA575DFAbAB03F125';
+const TESTNET_RPC_URL = 'https://holesky.rpc.thirdweb.com';
+const provider = new ethers.providers.JsonRpcProvider(TESTNET_RPC_URL); // Use your testnet RPC URL
+const PRIVATE_KEY =
+  'd0d431f7304958a330165f1a1d2e012093442df6629a559b9d3b60102573623e';
+const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 
 // Creator Registration
 exports.registerCreator = async (req, res) => {
@@ -11,7 +19,9 @@ exports.registerCreator = async (req, res) => {
   try {
     const existingCreator = await Creator.findOne({ walletAddress });
     if (existingCreator) {
-      return res.status(400).json({ message: 'Wallet address already registered.' });
+      return res
+        .status(400)
+        .json({ message: 'Wallet address already registered.' });
     }
 
     const newCreator = new Creator({
@@ -49,22 +59,25 @@ exports.getCreator = async (req, res) => {
   const { walletAddress } = req.params;
   try {
     const creator = await Creator.findOne({ walletAddress });
-    if (!creator) return res.status(404).json({ message: "Creator not found" });
+    if (!creator) return res.status(404).json({ message: 'Creator not found' });
 
     res.json(creator);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
 // Tip a creator
+
 exports.tipCreator = async (req, res) => {
   const { creatorAddress } = req.params;
-  const { amount } = req.body;
+  const { amount, tipperWallet } = req.body;
 
-  if (!amount) {
-    return res.status(400).json({ message: 'Amount is required.' });
+  if (!amount || !tipperWallet) {
+    return res
+      .status(400)
+      .json({ message: 'Amount and tipper wallet are required.' });
   }
 
   try {
@@ -73,8 +86,24 @@ exports.tipCreator = async (req, res) => {
       return res.status(404).json({ message: 'Creator not found.' });
     }
 
-    // Add tipping logic here (e.g., update balance)
-    res.status(200).json({ message: `Tipped ${amount} to creator!` });
+    // Smart contract tipping logic
+    // Assumes you have a contract instance ready
+    const contract = new ethers.Contract(contractAddress, contractABI, signer);
+    const tx = await contract.tipCreator(creatorAddress, {
+      value: ethers.utils.parseEther(amount.toString()), // Convert to wei
+      from: tipperWallet,
+    });
+
+    await tx.wait(); // Wait for transaction confirmation
+
+    // Update creator balance in MongoDB
+    creator.balance += parseFloat(amount);
+    await creator.save();
+
+    res.status(200).json({
+      message: `Successfully tipped ${amount} tokens to creator ${creator.name}.`,
+      transactionHash: tx.hash,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error tipping creator.' });
@@ -86,7 +115,9 @@ exports.withdrawFunds = async (req, res) => {
   const { walletAddress, amount } = req.body;
 
   if (!walletAddress || !amount) {
-    return res.status(400).json({ message: 'Wallet address and amount are required.' });
+    return res
+      .status(400)
+      .json({ message: 'Wallet address and amount are required.' });
   }
 
   try {
@@ -95,8 +126,28 @@ exports.withdrawFunds = async (req, res) => {
       return res.status(404).json({ message: 'Creator not found.' });
     }
 
-    // Add withdrawal logic here (e.g., deduct from balance)
-    res.status(200).json({ message: `Withdrawn ${amount} from creator wallet.` });
+    if (creator.balance < amount) {
+      return res.status(400).json({ message: 'Insufficient balance.' });
+    }
+
+    // Smart contract withdrawal logic
+    // Assumes you have a contract instance ready
+    const contract = new ethers.Contract(contractAddress, contractABI, signer);
+    const tx = await contract.withdrawFunds(
+      walletAddress,
+      ethers.utils.parseEther(amount.toString())
+    );
+
+    await tx.wait(); // Wait for transaction confirmation
+
+    // Update creator balance in MongoDB
+    creator.balance -= parseFloat(amount);
+    await creator.save();
+
+    res.status(200).json({
+      message: `Successfully withdrew ${amount} tokens.`,
+      transactionHash: tx.hash,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error withdrawing funds.' });
